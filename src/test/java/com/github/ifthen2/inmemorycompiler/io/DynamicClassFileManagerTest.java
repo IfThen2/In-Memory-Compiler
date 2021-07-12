@@ -1,11 +1,13 @@
 package com.github.ifthen2.inmemorycompiler.io;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.github.ifthen2.inmemorycompiler.model.JavaClassAsBytes;
 import javax.tools.FileObject;
 import javax.tools.JavaFileObject;
 import javax.tools.JavaFileObject.Kind;
 import javax.tools.StandardJavaFileManager;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,10 +37,9 @@ class DynamicClassFileManagerTest {
             .getJavaFileForOutput(DynamicLocation.DYNAMIC_INPUT, TEST_CLASS_NAME, Kind.CLASS,
                 sibling);
 
-        Assertions.assertTrue(outputFile instanceof JavaClassAsBytes);
-        Assertions
-            .assertEquals("/".concat(TEST_CLASS_NAME.replace('.', '/').concat(".class")),
-                outputFile.getName());
-        Assertions.assertEquals(Kind.CLASS, outputFile.getKind());
+        assertTrue(outputFile instanceof JavaClassAsBytes);
+        assertEquals("/".concat(TEST_CLASS_NAME.replace('.', '/').concat(".class")),
+            outputFile.getName());
+        assertEquals(Kind.CLASS, outputFile.getKind());
     }
 }

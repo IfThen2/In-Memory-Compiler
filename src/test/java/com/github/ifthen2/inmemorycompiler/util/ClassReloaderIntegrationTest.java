@@ -1,5 +1,10 @@
 package com.github.ifthen2.inmemorycompiler.util;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import com.github.ifthen2.inmemorycompiler.ClassReloader;
 import com.github.ifthen2.inmemorycompiler.guice.ClassReloaderModule;
 import com.github.ifthen2.inmemorycompiler.io.DynamicClassLoader;
@@ -8,7 +13,6 @@ import com.google.inject.Injector;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,12 +39,12 @@ class ClassReloaderIntegrationTest {
         DynamicClass dynamic = classReloader
             .compileAndLoadSingleClass(TEST_CLASS_1_FQN, getTestSourceCode(), 1).get();
 
-        Assertions.assertEquals(TEST_CLASS_1_FQN, dynamic.getClass().getName());
-        Assertions.assertTrue(dynamic.getClass().getClassLoader() instanceof DynamicClassLoader);
-        Assertions.assertEquals(
+        assertEquals(TEST_CLASS_1_FQN, dynamic.getClass().getName());
+        assertTrue(dynamic.getClass().getClassLoader() instanceof DynamicClassLoader);
+        assertEquals(
             classReloader.getInstance(TEST_CLASS_1_FQN, 1).getClass().getClassLoader(),
             dynamic.getClass().getClassLoader());
-        Assertions.assertDoesNotThrow(
+        assertDoesNotThrow(
             () -> classReloader.getInstance(TEST_CLASS_1_FQN, 1).getClass().cast(dynamic));
     }
 
@@ -58,7 +62,7 @@ class ClassReloaderIntegrationTest {
 
         DynamicClass dynamicSecond = dynamicClassSupplier.get();
 
-        Assertions.assertThrows(ClassCastException.class,
+        assertThrows(ClassCastException.class,
             () -> dynamicFirst.getClass().cast(dynamicSecond));
     }
 
@@ -78,8 +82,8 @@ class ClassReloaderIntegrationTest {
 
         List<DynamicClass> dynamicClassList = new ArrayList<>();
 
-        Assertions.assertDoesNotThrow(() -> dynamicClassList.add(dynamicClassFirst));
-        Assertions.assertDoesNotThrow(() -> dynamicClassList.add(dynamicClassSecond));
+        assertDoesNotThrow(() -> dynamicClassList.add(dynamicClassFirst));
+        assertDoesNotThrow(() -> dynamicClassList.add(dynamicClassSecond));
     }
 
     //TODO CC More Integration Tests

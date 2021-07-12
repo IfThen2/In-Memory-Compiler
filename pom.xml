@@ -11,7 +11,7 @@
   <properties>
     <guice.version>4.1.0</guice.version>
     <apache.commons.version>3.11</apache.commons.version>
-    <log4j.version>2.0.2</log4j.version>
+    <log4j.version>2.13.2</log4j.version>
     <slf4j.version>1.7.7</slf4j.version>
     <mockito.version>3.1.0</mockito.version>
     <junit.version>5.3.1</junit.version>
