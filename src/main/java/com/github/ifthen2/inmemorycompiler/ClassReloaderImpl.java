@@ -4,7 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.github.ifthen2.inmemorycompiler.io.DynamicLocation;
 import com.github.ifthen2.inmemorycompiler.model.JavaSourceFromString;
-import com.github.ifthen2.inmemorycompiler.util.DynamicClass;
+import com.github.ifthen2.inmemorycompiler.util.DynamicFunction;
 import com.github.ifthen2.inmemorycompiler.util.ThrowingSupplier;
 import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
@@ -35,7 +35,7 @@ public class ClassReloaderImpl implements ClassReloader {
     /**
      * K -> ClassName V -> (K -> ID & V -> Class)
      */
-    private final Hashtable<String, Hashtable<Integer, Class<?>>> classMap; // TODO too dirty for the top level. abstract this away to some "ClassStorage"
+    private final Hashtable<String, Hashtable<Integer, Class<DynamicFunction<?, ?>>>> classMap; // TODO too dirty for the top level. abstract this away to some "ClassStorage"
     private final JavaCompiler compiler;
     private final Supplier<JavaFileManager> fileManagerSupplier;
 
@@ -55,8 +55,8 @@ public class ClassReloaderImpl implements ClassReloader {
      * @param id id to archive the compiled class with
      */
     @Override
-    public Supplier<DynamicClass> compileAndLoadSingleClass(String className, String sourceCode,
-        int id) {
+    public Supplier<DynamicFunction<?, ?>> compileAndLoadClass(String className,
+        String sourceCode, int id) {
 
         /** Preconditions */
 
@@ -70,22 +70,26 @@ public class ClassReloaderImpl implements ClassReloader {
         Preconditions.checkArgument(id > 0, "id must be > 0. provided: {}", id);
 
         /** Body */
+
+        Hashtable<Integer, Class<DynamicFunction<?, ?>>> versionMap = classMap.get(className);
+
+        if (versionMap != null && versionMap.containsKey(id)) {
+            throw new RuntimeException("Class+Version already in use");
+        }
+
         JavaFileManager fileManager = fileManagerSupplier.get();
 
-        boolean compilationResult = compileSingleClass(className, sourceCode,
-            fileManager); // TODO handle case
-
-        try {
-            Class<DynamicClass> dynamicClass = loadSingleClass(className, id,
-                fileManager); // TODO handle case
-        } catch (ClassNotFoundException e) {
-            LOGGER.error("Error Loading Class: [{}]", className, e);
+        if (!compileClass(className, sourceCode, fileManager)) {
+            throw new RuntimeException("Compilation Failed");
         }
+
+        Class<DynamicFunction<?, ?>> dynamicFunctionClass = loadClass(className, id,
+            fileManager); // TODO handle case
 
         return getInstanceFactory(className, id);
     }
 
-    private boolean compileSingleClass(String className, String sourceCode,
+    private boolean compileClass(String className, String sourceCode,
         JavaFileManager fileManager) {
 
         /** Body */
@@ -102,23 +106,39 @@ public class ClassReloaderImpl implements ClassReloader {
             sourceFiles);
 
         LOGGER.info("Now Compiling Class: {}", className);
+
         return task.call();
     }
 
-    private Class<DynamicClass> loadSingleClass(String className, int id,
-        JavaFileManager fileManager) throws ClassNotFoundException {
+    private Class<DynamicFunction<?, ?>> loadClass(String className, int id,
+        JavaFileManager fileManager) {
 
         /** Body */
 
         LOGGER.debug("Now Loading Class: {} ID={}", className, id);
 
-        Class<?> clazz = fileManager.getClassLoader(DynamicLocation.DYNAMIC_INPUT)
-            .loadClass(className);
+        Class<?> clazz = null;
 
-        classMap.putIfAbsent(className, new Hashtable<>());
-        classMap.get(className).put(id, clazz);
+        try {
+            clazz = fileManager
+                .getClassLoader(DynamicLocation.DYNAMIC_INPUT)
+                .loadClass(className);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("error, class not found");
+        }
 
-        return (Class<DynamicClass>) clazz;
+        Class<DynamicFunction<?, ?>> dynamicFunctionClass = null;
+
+        try {
+            dynamicFunctionClass = (Class<DynamicFunction<?, ?>>) clazz;
+            classMap.putIfAbsent(className, new Hashtable<>());
+            classMap.get(className).put(id, dynamicFunctionClass);
+
+        } catch (ClassCastException e) {
+            LOGGER.error("Source Code does not implement DynamicFunction<T,R>", e);
+        }
+
+        return dynamicFunctionClass;
     }
 
     /**
@@ -129,7 +149,7 @@ public class ClassReloaderImpl implements ClassReloader {
      * @return instance of {@Link DynamicClass} or null if not found
      */
     @Override
-    public DynamicClass getInstance(String className, int id)
+    public DynamicFunction<?, ?> getInstance(String className, int id)
         throws InstantiationException, IllegalAccessException {
 
         /** Preconditions */
@@ -141,9 +161,9 @@ public class ClassReloaderImpl implements ClassReloader {
 
         /** Body */
 
-        Class<?> clazz = classMap.get(className).get(id);
+        Class<DynamicFunction<?, ?>> clazz = classMap.get(className).get(id);
 
-        return (DynamicClass) clazz.newInstance();
+        return clazz.newInstance();
     }
 
     /**
@@ -154,7 +174,7 @@ public class ClassReloaderImpl implements ClassReloader {
      * @return Supplier {@Link DynamicClass} or null if not found
      */
     @Override
-    public Supplier<DynamicClass> getInstanceFactory(String className, int id) {
+    public Supplier<DynamicFunction<?, ?>> getInstanceFactory(String className, int id) {
 
         /** Preconditions */
 
@@ -165,7 +185,8 @@ public class ClassReloaderImpl implements ClassReloader {
 
         /** Body */
 
-        Class<DynamicClass> clazz = (Class<DynamicClass>) classMap.get(className).get(id);
+        Class<DynamicFunction<?, ?>> clazz = classMap.get(className)
+            .get(id);
 
         return clazz == null ? null : ThrowingSupplier.disguiseAsSupplier(clazz::newInstance);
     }

@@ -9,6 +9,7 @@ import java.util.Hashtable;
 import java.util.Map;
 import javax.tools.FileObject;
 import javax.tools.ForwardingJavaFileManager;
+import javax.tools.JavaFileManager;
 import javax.tools.JavaFileObject;
 import javax.tools.JavaFileObject.Kind;
 import javax.tools.StandardJavaFileManager;
@@ -18,7 +19,7 @@ import org.slf4j.LoggerFactory;
 /**
  * File Manager for use with DynamicClassLoader.
  */
-public class DynamicClassFileManager extends ForwardingJavaFileManager {
+public class DynamicClassFileManager extends ForwardingJavaFileManager<JavaFileManager> {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicClassFileManager.class);
 
@@ -35,20 +36,20 @@ public class DynamicClassFileManager extends ForwardingJavaFileManager {
     }
 
     /**
-     * Will be used by us to get the class loader for our compiled class. It creates an anonymous
-     * class extending the SecureClassLoader which uses the byte code created by the compiler and
-     * stored in the JavaClassObject, and returns the Class for it
+     * Used to get the class loader for our compiled class. It creates an anonymous class extending
+     * the SecureClassLoader which uses the byte code created by the compiler and stored in the
+     * JavaClassObject, and returns the Class for it
      *
      * @param location where to place or search for file objects.
      */
     @Override
-    public ClassLoader getClassLoader(Location location) {
+    public DynamicClassLoader getClassLoader(Location location) {
         return new DynamicClassLoader(this.getClass().getClassLoader(), this);
     }
 
     /**
-     * Gives the compiler an instance of the JavaClassObject so that the compiler can write the byte
-     * code into it.
+     * Gives the compiler an instance of the JavaClassObject so that it can write the byte code into
+     * it.
      *
      * @param location where to place or search for file objects.
      * @param className name of output class file

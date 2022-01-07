@@ -37,10 +37,11 @@ public class DynamicClassLoader extends ClassLoader {
      * @return compiled {@Link Class} file
      */
     @Override
-    public Class loadClass(String className) throws ClassNotFoundException {
+    public Class<?> loadClass(String className) throws ClassNotFoundException {
 
+        LOGGER.info("Being Asked To Load {}", className);
         /** Preconditions */
-        
+
         Preconditions.checkState(!StringUtils.isEmpty(className),
             "className must not be empty. provided: {}",
             className);
@@ -52,11 +53,9 @@ public class DynamicClassLoader extends ClassLoader {
         if (classAsBytes == null) {
             return super.loadClass(className);
         } else {
-            Class<?> clazz = defineClass(className,
+            return defineClass(className,
                 classAsBytes.getBytes(), 0,
                 classAsBytes.getBytes().length);
-
-            return clazz;
         }
     }
 }

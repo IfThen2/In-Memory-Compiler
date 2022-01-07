@@ -1,13 +1,13 @@
-package com.github.ifthen2.inmemorycompiler.util;
+package com.github.ifthen2.inmemorycompiler;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.github.ifthen2.inmemorycompiler.ClassReloader;
 import com.github.ifthen2.inmemorycompiler.guice.ClassReloaderModule;
 import com.github.ifthen2.inmemorycompiler.io.DynamicClassLoader;
+import com.github.ifthen2.inmemorycompiler.util.DynamicFunction;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.util.ArrayList;
@@ -36,8 +36,8 @@ class ClassReloaderIntegrationTest {
     @DisplayName("Test Simple Compile & Load Single Class")
     void testSimpleCompileAndLoad() throws InstantiationException, IllegalAccessException {
 
-        DynamicClass dynamic = classReloader
-            .compileAndLoadSingleClass(TEST_CLASS_1_FQN, getTestSourceCode(), 1).get();
+        DynamicFunction<String, String> dynamic = (DynamicFunction<String, String>) classReloader
+            .compileAndLoadClass(TEST_CLASS_1_FQN, getTestSourceCode(), 1).get();
 
         assertEquals(TEST_CLASS_1_FQN, dynamic.getClass().getName());
         assertTrue(dynamic.getClass().getClassLoader() instanceof DynamicClassLoader);
@@ -52,15 +52,17 @@ class ClassReloaderIntegrationTest {
     @DisplayName("Test Casting Classes Loaded By Different ClassLoaders")
     void testCastingClassesFromDifferentClassLoaders() {
 
-        Supplier<DynamicClass> dynamicClassSupplier = classReloader
-            .compileAndLoadSingleClass(TEST_CLASS_1_FQN, getTestSourceCode(), 1);
+        Supplier<DynamicFunction<?, ?>> dynamicClassSupplier = classReloader
+            .compileAndLoadClass(TEST_CLASS_1_FQN, getTestSourceCode(), 1);
 
-        DynamicClass dynamicFirst = dynamicClassSupplier.get();
+        DynamicFunction<String, String> dynamicFirst = (DynamicFunction<String, String>) dynamicClassSupplier
+            .get();
 
         dynamicClassSupplier = classReloader
-            .compileAndLoadSingleClass(TEST_CLASS_1_FQN, getTestSourceCode(), 2);
+            .compileAndLoadClass(TEST_CLASS_1_FQN, getTestSourceCode(), 2);
 
-        DynamicClass dynamicSecond = dynamicClassSupplier.get();
+        DynamicFunction<String, String> dynamicSecond = (DynamicFunction<String, String>) dynamicClassSupplier
+            .get();
 
         assertThrows(ClassCastException.class,
             () -> dynamicFirst.getClass().cast(dynamicSecond));
@@ -70,20 +72,22 @@ class ClassReloaderIntegrationTest {
     @DisplayName("Test Adding Classes Loaded By Different ClassLoaders To Generic Collections")
     void testAddingClassesFromDifferentClassLoadersToCollection() {
 
-        Supplier<DynamicClass> dynamicClassSupplier = classReloader
-            .compileAndLoadSingleClass(TEST_CLASS_1_FQN, getTestSourceCode(), 1);
+        Supplier<DynamicFunction<?, ?>> dynamicClassSupplier = classReloader
+            .compileAndLoadClass(TEST_CLASS_1_FQN, getTestSourceCode(), 1);
 
-        DynamicClass dynamicClassFirst = dynamicClassSupplier.get();
+        DynamicFunction<String, String> dynamicFunctionFirst = (DynamicFunction<String, String>) dynamicClassSupplier
+            .get();
 
         dynamicClassSupplier = classReloader
-            .compileAndLoadSingleClass(TEST_CLASS_1_FQN, getTestSourceCode(), 2);
+            .compileAndLoadClass(TEST_CLASS_1_FQN, getTestSourceCode(), 2);
 
-        DynamicClass dynamicClassSecond = dynamicClassSupplier.get();
+        DynamicFunction<String, String> dynamicFunctionSecond = (DynamicFunction<String, String>) dynamicClassSupplier
+            .get();
 
-        List<DynamicClass> dynamicClassList = new ArrayList<>();
+        List<DynamicFunction<String, String>> dynamicFunctionList = new ArrayList<>();
 
-        assertDoesNotThrow(() -> dynamicClassList.add(dynamicClassFirst));
-        assertDoesNotThrow(() -> dynamicClassList.add(dynamicClassSecond));
+        assertDoesNotThrow(() -> dynamicFunctionList.add(dynamicFunctionFirst));
+        assertDoesNotThrow(() -> dynamicFunctionList.add(dynamicFunctionSecond));
     }
 
     //TODO CC More Integration Tests
@@ -94,14 +98,11 @@ class ClassReloaderIntegrationTest {
             .append("\n")
             .append("import com.github.ifthen2.inmemorycompiler.util.*;\n")
             .append("\n")
-            .append("public class TestClass implements DynamicClass {\n")
+            .append("public class TestClass implements DynamicFunction<String, String> {\n")
             .append("\n")
-            .append("    public String toString() {\n")
-            .append("        return this.getClass().getSimpleName();\n")
-            .append("    }\n")
-            .append("    public void execute() {\n")
-            .append("        System.out.println(\"ClassLoader: \"")
-            .append("           + this.getClass().getClassLoader());\n")
+            .append("    public String apply(String s) {\n")
+            .append("        System.out.println(s + \"more\");\n")
+            .append("        return s + \"more\";\n")
             .append("    }\n")
             .append("}\n").toString();
     }
